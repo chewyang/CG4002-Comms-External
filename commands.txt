@@ -1,0 +1,10 @@
+PC - ULTRA 96
+ULTRA 96 -EVAL server
+
+sudo kill -9 $(sudo lsof -t -i:8082)
+python3 eval_server.py 127.0.0.1 8082 4
+ssh -N -f -L 8282:localhost:8082 xilinx@137.132.86.227
+ssh -N -f -L 8082:localhost:8282 e0406642@sunfire.comp.nus.edu.sg
+
+while logged onto xilinx,
+scp e0406642@sunfire.comp.nus.edu.sg:/user/e/e0406642/laptop-ultra96_host.py /home/xilinx/
