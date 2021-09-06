@@ -6,6 +6,16 @@ import threading
 ACTIONS = ['mermaid', 'jamesbond', 'dab']
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
 
+empty_dict = dict.fromkeys([
+    'roll',
+    'pitch',
+    'yaw',
+    'AccX',
+    'AccY',
+    'AccZ',
+    'mil'
+    ])
+
 
 class StringGen():
     def __init__(self, randSeed = None):
@@ -44,6 +54,8 @@ class StringGen():
         #sleep(3)
     
     
+
+
 
 
 def main():

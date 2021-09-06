@@ -81,12 +81,8 @@ class Server(threading.Thread):
     def decrypt_message(self, cipher_text):
         
         decoded_message = base64.b64decode(cipher_text)
-        print("decoded message is ") 
-        print(decoded_message)
 
         iv = decoded_message[:16]
-        print("iv is ")
-        print(iv)
         secret_key = bytes(str(self.secret_key), encoding="utf8") 
 
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
@@ -95,7 +91,6 @@ class Server(threading.Thread):
         
         decrypted_message = decrypted_message[decrypted_message.find('#'):]
         decrypted_message = bytes(decrypted_message[1:], 'utf8').decode('utf8')
-        print( "decrypted message is " + decrypted_message)
         messages = decrypted_message.split('|')
         print(messages)
         position, action, sync = messages[:MESSAGE_SIZE]
@@ -110,7 +105,6 @@ class Server(threading.Thread):
             if data:
                 try:
                     msg = data.decode("utf8")
-                    print("message received is " + msg)
                     decrypted_message = self.decrypt_message(msg)
                     if decrypted_message['action'] == "logout":
                         self.logout = True
@@ -156,11 +150,10 @@ class Server(threading.Thread):
 
         print("Enter the secret key: ")
         secret_key = sys.stdin.readline().strip()
-        print("the secret key u have entered is " + secret_key + "length of key: " + str(len(secret_key)))
 
         print('connection from', client_address)
         if len(secret_key) == 16 or len(secret_key) == 24 or len(secret_key) == 32:
-            print("pass u bitch!")
+            
             pass
         else:
             print("AES key must be either 16, 24, or 32 bytes long")

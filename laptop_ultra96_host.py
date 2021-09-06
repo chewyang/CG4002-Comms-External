@@ -68,10 +68,11 @@ class Server(multiprocessing.Process):
                             self.stop()
                             
                     if(len_of_split ==3):
-                            THREADS[0].send_msg(msg) #eval_client to send 
+                            THREADS[0].sendEncryptedMsg(msg) #eval_client to send 
+
+                            print(msg)
                      
                 
-                    print("raw message received is " + msg)
                 except Exception as e:
                     print("error bitch")
                     print(e)
@@ -87,7 +88,11 @@ class Server(multiprocessing.Process):
 
         # Wait for a connection
         print('waiting for a connection')
-        self.connection, client_address = self.socket.accept()
+        try:
+            self.connection, client_address = self.socket.accept()
+            
+        except Exception as e:
+            print(e)
 
         
         return client_address
@@ -95,7 +100,6 @@ class Server(multiprocessing.Process):
     def stop(self):
         self.connection.close()
         self.shutdown.set()
-        print("biys")
         THREADS[0].stop()
 
     def current_milli_time(self):
@@ -117,7 +121,7 @@ def main():
     port_num = 8082
     group_id = "4"
 
-    ultra96_eval = ultra96_eval_client.Server("localhost", 8088)
+    ultra96_eval = ultra96_eval_client.EvalClient("localhost", 8088)
     my_server = Server(ip_addr, port_num, group_id)
 
     THREADS.append(ultra96_eval)

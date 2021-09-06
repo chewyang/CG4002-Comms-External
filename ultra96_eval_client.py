@@ -3,6 +3,7 @@ import sys
 import random
 import time
 
+from socketclient import Client
 import socket
 import threading
 
@@ -15,76 +16,46 @@ from Crypto import Random
 
 BLOCK_SIZE = 16
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
-ip_address = "localhost"
-port_number = 8088
+TARGET_IP = "localhost" #To be changed to evaluation server's IP address
+TARGET_PORT = 8088 #To be changed to evaluation server's port
 pad = lambda s:  ((BLOCK_SIZE - len(s) % BLOCK_SIZE) -1 ) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE) + "#" +  s
 
-password = "aaaaaaaaaaaaaaaa"
+PASSWORD = "aaaaaaaaaaaaaaaa"
 
 
 
-class Server(threading.Thread):
-    def __init__(self, ipaddr, port_num):
-        super(Server, self).__init__()
+class EvalClient(Client):
+    def __init__(self, targetIp, targetPort):
+        super().__init__(targetIp, targetPort)
 
-        self.shutdown = threading.Event()
         
-        self.logout = False
-        self.ipaddr = ipaddr
-        self.port_num = port_num
-        self.estSocketComms()
-
-    def estSocketComms(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            self.socket.connect((self.ipaddr, self.port_num))
-        except Exception as e:
-            print("Connection error. IP address and/or port number is incorrect")
-            self.ipaddr = input("Enter IP address: ")
-            self.port_num = input("Enter port number")
-            
-        
-        
-        
-        
-        
-
-    def encrypt(self, raw, password):
-        secret_key = bytes(str(password), encoding="utf8") 
+    def encrypt(self, raw):
+        secret_key = bytes(str(PASSWORD), encoding="utf8") 
 
         raw = pad(raw).encode("utf-8")
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(secret_key, AES.MODE_CBC, iv)
-        print(iv)
+        #print(iv)
         return base64.b64encode(iv + cipher.encrypt(raw))
     
-    """def run(self):
-        while not self.shutdown.is_set():
-            #data = self.socket.recv(1024)
-            #print(data)
-            plaintext = input("Enter text to be encrypted: ")
-            if "logout" in plaintext:
-                plaintext = "|logout|"
-                self.logout = True
-            
-            self.send_msg(plaintext)
-            
-            if self.logout:
-                self.stop()"""
-    
-    def stop(self):
-        self.socket.close()
-        self.shutdown.set()
 
     
-    def send_msg(self, plaintext):
-        ciphertext = self.encrypt(plaintext, password)
-        self.socket.send(ciphertext)
+    def sendEncryptedMsg(self, plaintext):
+        print("plaintext is " + plaintext)
+        ciphertext = self.encrypt(plaintext)
+        #self.socket.send(ciphertext)
+        self.connection.send(ciphertext)
         
-     
+    def sendLogoutMsg(self):
+        print("the fuck?")
+        plaintextLogoutMsg = "|logout|"
+        #ciphertextLogoutMsg = self.encrypt(plaintextLogoutMsg)
+        self.sendEncryptedMsg(plaintextLogoutMsg)
+        self.stop()
+        
 
 def main():
-    my_server = Server(ip_address, port_number)
+    my_server = EvalClient(TARGET_IP, TARGET_PORT)
     my_server.start()
 
 

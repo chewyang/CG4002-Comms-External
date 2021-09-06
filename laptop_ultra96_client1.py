@@ -7,6 +7,7 @@ import random_eval_string_gen
 import socket
 import threading
 from ssh_tunneling import TunnelNetwork
+from socketclient import Client
 
 import base64
 #import numpy as np
@@ -16,6 +17,8 @@ from tkinter import Label, Tk
 #from Crypto import Random
 
 LOCAL_ADDRESS = "localhost"
+LOCAL_PORT = 8082
+
 TARGET_ADDRESS = "137.132.86.227"
 TARGET_PORT = 15006
 
@@ -41,62 +44,18 @@ tunnel_i = [
 
 
 
-class Server(threading.Thread):
-    def __init__(self):
-        super(Server, self).__init__()
+class Ultra96Client(Client):
+    def __init__(self, targetIP, targetPort):
+        super().__init__(targetIP, targetPort)
         
+        p1 = multiprocessing.Process(target=self.receiveMsg)
+        p2 = threading.Thread(target=self.sendLogoutMsg)
 
-        self.shutdown = threading.Event()
-        self.connection = None
-        self.logout = False
-        self.ipaddr = LOCAL_ADDRESS
-        self.port_num = 8082 #self.estSSHtunnel()
-        print(self.port_num)
-        self.estSocketComms()
-        time.sleep(5)
+        p1.start()
+        p2.start()
 
-    def estSocketComms(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:#socket.gethostbyname(socket.gethostname())
-            addr = ("localhost", self.port_num)
-            self.socket.connect(addr)
-            print("connected!")
 
-            p1 = multiprocessing.Process(target=self.receive_msg)
-            p2 = threading.Thread(target=self.send_logout_msg)
-
-            p1.start()
-            p2.start()
-
-        except Exception as e:
-            print(e)
-            
-        
-    def receive_msg(self):
-        while not self.shutdown.is_set():
-            data = self.socket.recv(1024)
-            if data:
-                try:
-                    msg = data.decode("utf8")
-                    print("Host sent " + msg)
-                except Exception as e:
-                    print("error bitch")
-                    print(e)
-            else:
-                print('no more data')
-                self.stop()
-            
-    def send_logout_msg(self):
-        while not self.shutdown.is_set():
-            logoutMsg = input()
-            if "logout" in logoutMsg:
-
-                self.send_msg(logoutMsg)
-                print("Logout request sent!")
-                self.stop()
-
-    def send_msg(self, message_to_ultra96):
-        self.socket.send(message_to_ultra96.encode("utf-8"))
+        #self.estSSHtunnel()
 
     def estSSHtunnel(self):
         tunnel = TunnelNetwork(tunnel_i, TARGET_ADDRESS, TARGET_PORT)
@@ -111,29 +70,15 @@ class Server(threading.Thread):
         
     
     def run(self):
-        while not self.shutdown.is_set():
+        while not self.shutDown.is_set():
             
             self.eval_string_from_bluno_processed = random_eval_string_gen.StringGen(random.random())
-            self.send_msg(self.eval_string_from_bluno_processed.sendEvalString())
+            self.sendMsg(self.eval_string_from_bluno_processed.sendEvalString())
             time.sleep(5)
             
-            """plaintext = input("Enter text to be sent: ")
-            if "logout" in plaintext:
-                self.logout = True
-
-            self.socket.send(plaintext.encode("utf-8"))
-            print("sent!")
-            
-            if self.logout:
-                self.stop()"""
-    
-    def stop(self):
-        self.socket.close()
-        self.shutdown.set()
-        
 
 def main():
-    my_server = Server()
+    my_server = Ultra96Client(LOCAL_ADDRESS, LOCAL_PORT)
     my_server.start()
     
 
