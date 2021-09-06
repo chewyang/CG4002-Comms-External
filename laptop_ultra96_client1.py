@@ -3,7 +3,7 @@ import os
 import sys
 import random
 import time
-
+import random_eval_string_gen
 import socket
 import threading
 from ssh_tunneling import TunnelNetwork
@@ -61,8 +61,12 @@ class Server(threading.Thread):
             addr = ("localhost", self.port_num)
             self.socket.connect(addr)
             print("connected!")
-            p = multiprocessing.Process(target=self.receive_msg)
-            p.start()
+
+            p1 = multiprocessing.Process(target=self.receive_msg)
+            p2 = threading.Thread(target=self.send_logout_msg)
+
+            p1.start()
+            p2.start()
 
         except Exception as e:
             print(e)
@@ -82,6 +86,17 @@ class Server(threading.Thread):
                 print('no more data')
                 self.stop()
             
+    def send_logout_msg(self):
+        while not self.shutdown.is_set():
+            logoutMsg = input()
+            if "logout" in logoutMsg:
+
+                self.send_msg(logoutMsg)
+                print("Logout request sent!")
+                self.stop()
+
+    def send_msg(self, message_to_ultra96):
+        self.socket.send(message_to_ultra96.encode("utf-8"))
 
     def estSSHtunnel(self):
         tunnel = TunnelNetwork(tunnel_i, TARGET_ADDRESS, TARGET_PORT)
@@ -97,8 +112,12 @@ class Server(threading.Thread):
     
     def run(self):
         while not self.shutdown.is_set():
-
-            plaintext = input("Enter text to be sent: ")
+            
+            self.eval_string_from_bluno_processed = random_eval_string_gen.StringGen(random.random())
+            self.send_msg(self.eval_string_from_bluno_processed.sendEvalString())
+            time.sleep(5)
+            
+            """plaintext = input("Enter text to be sent: ")
             if "logout" in plaintext:
                 self.logout = True
 
@@ -106,7 +125,7 @@ class Server(threading.Thread):
             print("sent!")
             
             if self.logout:
-                self.stop()
+                self.stop()"""
     
     def stop(self):
         self.socket.close()

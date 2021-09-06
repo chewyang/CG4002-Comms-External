@@ -28,7 +28,7 @@ class Server(threading.Thread):
         super(Server, self).__init__()
 
         self.shutdown = threading.Event()
-        self.connection = None
+        
         self.logout = False
         self.ipaddr = ipaddr
         self.port_num = port_num
@@ -37,7 +37,7 @@ class Server(threading.Thread):
     def estSocketComms(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            self.connection = self.socket.connect((self.ipaddr, self.port_num))
+            self.socket.connect((self.ipaddr, self.port_num))
         except Exception as e:
             print("Connection error. IP address and/or port number is incorrect")
             self.ipaddr = input("Enter IP address: ")
@@ -58,24 +58,28 @@ class Server(threading.Thread):
         print(iv)
         return base64.b64encode(iv + cipher.encrypt(raw))
     
-    def run(self):
+    """def run(self):
         while not self.shutdown.is_set():
-            """data = self.socket.recv(1024)
-            print(data)"""
+            #data = self.socket.recv(1024)
+            #print(data)
             plaintext = input("Enter text to be encrypted: ")
             if "logout" in plaintext:
                 plaintext = "|logout|"
                 self.logout = True
-
-            ciphertext = self.encrypt(plaintext, password)
-            self.socket.send(ciphertext)
+            
+            self.send_msg(plaintext)
             
             if self.logout:
-                self.stop()
+                self.stop()"""
     
     def stop(self):
-        self.connection.close()
+        self.socket.close()
         self.shutdown.set()
+
+    
+    def send_msg(self, plaintext):
+        ciphertext = self.encrypt(plaintext, password)
+        self.socket.send(ciphertext)
         
      
 

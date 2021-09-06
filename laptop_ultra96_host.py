@@ -16,7 +16,8 @@ from tkinter import Label, Tk
 import pandas as pd
 from Crypto.Cipher import AES
 
-
+THREADS = []
+MESSAGE_SIZE = 3
 
 class Server(multiprocessing.Process):
     def __init__(self, ip_addr, port_num, group_id):
@@ -55,13 +56,22 @@ class Server(multiprocessing.Process):
             data = self.connection.recv(1024)
             if data:
                 msg = data.decode("utf8")
-
+                split_msg = msg.split("|")
+                len_of_split = len(split_msg)
                 try:
-                    if(msg == "sync"):
-                        self.send_msg(self.current_milli_time())
-                    else:    
+                    if(len_of_split == 1):
+                    
+                        if "sync" in split_msg:
+                            self.send_msg(self.current_milli_time())
+
+                        elif "logout" in split_msg:
+                            self.stop()
+                            
+                    if(len_of_split ==3):
+                            THREADS[0].send_msg(msg) #eval_client to send 
+                     
                 
-                        print("message received is " + msg)
+                    print("raw message received is " + msg)
                 except Exception as e:
                     print("error bitch")
                     print(e)
@@ -86,7 +96,7 @@ class Server(multiprocessing.Process):
         self.connection.close()
         self.shutdown.set()
         print("biys")
-
+        THREADS[0].stop()
 
     def current_milli_time(self):
         return str(round(time.time() * 1000))
@@ -108,9 +118,12 @@ def main():
     group_id = "4"
 
     ultra96_eval = ultra96_eval_client.Server("localhost", 8088)
-    ultra96_eval.start()
-    print("evalclient started")
     my_server = Server(ip_addr, port_num, group_id)
+
+    THREADS.append(ultra96_eval)
+    THREADS.append(my_server)
+    
+    ultra96_eval.start()
     my_server.start()
 
     #my_server2 = Server(ip_addr, 8083, group_id)
