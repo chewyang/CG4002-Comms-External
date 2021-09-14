@@ -9,3 +9,4 @@ ssh -N -f -L 8082:localhost:8282 e0406642@sunfire.comp.nus.edu.sg
 while logged onto xilinx,
 scp e0406642@sunfire.comp.nus.edu.sg:/user/e/e0406642/laptop-ultra96_host.py /home/xilinx/
 cd ../../mnt/c/users/razer/OneDrive\ -\ National\ University\ of\ Singapore/NUS/NUS\ Y3S1/CG4002/comms_external/
+

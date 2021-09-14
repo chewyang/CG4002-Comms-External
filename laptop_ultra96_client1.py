@@ -15,7 +15,17 @@ from tkinter import Label, Tk
 #import pandas as pd
 #from Crypto.Cipher import AES
 #from Crypto import Random
+import zmq
+from zmq.devices.basedevice import ProcessDevice
+from zmq.devices.monitoredqueuedevice import MonitoredQueue
+from zmq.utils.strtypes import asbytes
 
+#------------------------------------
+frontend_port = 5519
+backend_port = 5510
+monitor_port = 5512
+number_of_workers = 2
+#------------------------------------
 LOCAL_ADDRESS = "localhost"
 LOCAL_PORT = 8082
 
@@ -44,18 +54,36 @@ tunnel_i = [
 
 
 
-class Ultra96Client(Client):
-    def __init__(self, targetIP, targetPort):
-        super().__init__(targetIP, targetPort)
-        
-        p1 = multiprocessing.Process(target=self.receiveMsg)
-        p2 = threading.Thread(target=self.sendLogoutMsg)
+class Ultra96Client(threading.Thread):
+    def __init__(self, frontendPort, clientId):
+        super(Ultra96Client, self).__init__()
+        self.frontendPort = frontendPort
+        self.clientId = clientId
+        self.requestNum = 1
+        self.shutDown = threading.Event()
 
-        p1.start()
-        p2.start()
+        self.estConnection()
+
+        self.p2 = threading.Thread(target=self.sendMsgSyncLogout)
+        self.p2.setDaemon(True)
+        self.p2.start()
 
 
         #self.estSSHtunnel()
+
+
+    def estConnection(self):
+        context = zmq.Context()
+        self.connection = context.socket(zmq.REQ)
+        self.connection.connect("tcp://127.0.0.1:%s" % self.frontendPort)
+
+    def sendMsg(self, msg):
+        self.connection.send (("Request#%s, from client#%s: %s" % (str(self.requestNum), str(self.clientId), msg)).encode("utf-8"))
+        self.requestNum = self.requestNum +1
+
+    def recvMsg(self):
+        message = self.connection.recv()
+        return message.decode("utf8")
 
     def estSSHtunnel(self):
         tunnel = TunnelNetwork(tunnel_i, TARGET_ADDRESS, TARGET_PORT)
@@ -66,19 +94,39 @@ class Ultra96Client(Client):
             return tunnel.get_local_connect_port()
         except Exception as e:
             print("Failed to create SSH tunnel")
+    
+    def stop(self):
+        self.connection.close()
+        self.shutDown.set()
+        self.p2
 
+    def sendMsgSyncLogout(self):
         
+        while not self.shutDown.is_set():
+            msg = input()
+            if "logout" in msg:
+                self.shutDown.set()
+                self.sendMsg("logout")
+                print("Logout request sent!")
+            elif "sync" in msg:
+                self.sendMsg("sync," + str(round(time.time() * 1000)))
+                print("Sync message from "+ self.recvMsg())
+                #self.stop()
     
     def run(self):
         while not self.shutDown.is_set():
             
-            self.eval_string_from_bluno_processed = random_eval_string_gen.StringGen(random.random())
-            self.sendMsg(self.eval_string_from_bluno_processed.sendEvalString())
-            time.sleep(5)
+            self.rawBleData = random_eval_string_gen.StringGen()
+            self.sendMsg(self.rawBleData.sendRawBleData())
+            #print("waiting for reply")
+            msgReceived = self.recvMsg()
+            #print("host sent:" + msgReceived)
+
+            time.sleep(2)
             
 
 def main():
-    my_server = Ultra96Client(LOCAL_ADDRESS, LOCAL_PORT)
+    my_server = Ultra96Client(frontend_port, 1)
     my_server.start()
     
 

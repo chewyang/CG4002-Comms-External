@@ -41,13 +41,12 @@ class EvalClient(Client):
 
     
     def sendEncryptedMsg(self, plaintext):
-        print("plaintext is " + plaintext)
+        #print("plaintext is " + plaintext)
         ciphertext = self.encrypt(plaintext)
         #self.socket.send(ciphertext)
         self.connection.send(ciphertext)
         
     def sendLogoutMsg(self):
-        print("the fuck?")
         plaintextLogoutMsg = "|logout|"
         #ciphertextLogoutMsg = self.encrypt(plaintextLogoutMsg)
         self.sendEncryptedMsg(plaintextLogoutMsg)
