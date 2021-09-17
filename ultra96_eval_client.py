@@ -6,7 +6,6 @@ import time
 from socketclient import Client
 import socket
 import threading
-
 import base64
 import numpy as np
 from tkinter import Label, Tk
@@ -17,7 +16,7 @@ from Crypto import Random
 BLOCK_SIZE = 16
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
 TARGET_IP = "localhost" #To be changed to evaluation server's IP address
-TARGET_PORT = 8088 #To be changed to evaluation server's port
+TARGET_PORT = 55359 #To be changed to evaluation server's port
 pad = lambda s:  ((BLOCK_SIZE - len(s) % BLOCK_SIZE) -1 ) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE) + "#" +  s
 
 PASSWORD = "aaaaaaaaaaaaaaaa"
@@ -27,7 +26,7 @@ PASSWORD = "aaaaaaaaaaaaaaaa"
 class EvalClient(Client):
     def __init__(self, targetIp, targetPort):
         super().__init__(targetIp, targetPort)
-
+        
         
     def encrypt(self, raw):
         secret_key = bytes(str(PASSWORD), encoding="utf8") 

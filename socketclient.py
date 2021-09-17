@@ -1,5 +1,6 @@
 import socket 
 import threading
+import time
 
 
 class Client(threading.Thread):
@@ -16,6 +17,9 @@ class Client(threading.Thread):
             self.connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection.connect((self.targetIp, self.targetPort))
             print("connected!")
+            time.sleep(5)
+            self.sendMsg("hello")
+            print("sent")
         except Exception as e:
             print("Connection error")
             print(e)
