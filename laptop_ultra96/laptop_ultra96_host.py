@@ -16,7 +16,7 @@ from dancedanceobjects.objects import ReplyMessagePacket, RequestMessagePacket, 
 from zmq.devices.basedevice import ProcessDevice
 from zmq.devices.monitoredqueuedevice import MonitoredQueue
 from zmq.utils.strtypes import asbytes
-
+import pickle
 #------------------------------------
 frontend_port = 15016
 backend_port = 15017
@@ -64,8 +64,8 @@ class Server(threading.Thread):
             if "logout" in data:
                 self.shutdown.set()
                 THREADS[0].sendLogoutMsg()
-
         self.connection.send_pyobj(repMsg)
+
 
     def recvMsg(self):
         msg = self.connection.recv_pyobj()
@@ -116,8 +116,10 @@ def monitordevice():
 
     monitoringdevice.setsockopt_in(zmq.RCVHWM, 1)
     monitoringdevice.setsockopt_out(zmq.SNDHWM, 1)
+    print("starting up")
     monitoringdevice.start()
     print( "Program: Monitoring device has started")
+
 
 def monitor():
     table = []
@@ -129,18 +131,28 @@ def monitor():
     socket.setsockopt(zmq.SUBSCRIBE, "".encode("utf-8"))
     print("Monitoring client:")
     while True:
-        #requ
         string = socket.recv_multipart()
-        #print(string)
-        #inOrOut = (string[0].decode("utf-8")).strip("'")
-        #print(inOrOut)
-        #msgBody = (string[3].decode("utf-8")).strip("'")
-        #print("Monitoring client: " + inOrOut + ": " + msgBody)
-        #string1 = string.decode("utf8")
-        #print ("\nMonitoring Client: %s" % string)
-        #if inOrOut == "in":
-        #    table[0] =
 
+def queueDevice():
+
+    try:
+        context = zmq.Context(1)
+        #socket facing the clients
+        frontend = context.socket(zmq.XREP)
+        frontend.bind("tcp://" + ULTRA96_IP + ":%d" % frontend_port)
+        #socket facing services
+        backend = context.socket(zmq.XREQ)
+        backend.bind("tcp://" + ULTRA96_IP + ":%d" % backend_port)
+        zmq.device(zmq.QUEUE, frontend, backend)
+
+    except Exception as e:
+        print(e)
+        print("bringing down zmq device")
+    finally:
+        pass
+        frontend.close()
+        backend.close()
+        context.term()
 
 
 def main():
@@ -149,9 +161,9 @@ def main():
     ip_addr = "127.0.0.1"
     port_num = 8082
     group_id = "4"
-
+    #queueDevice()
     ultra96_eval = ultra96_eval_client.EvalClient("localhost", 8088)
-    monitoring_p = multiprocessing.Process(target=monitordevice)
+    monitoring_p = multiprocessing.Process(target= queueDevice)
     monitoring_p.start()
 
     my_server = Server(backend_port)
@@ -161,8 +173,8 @@ def main():
 
     ultra96_eval.start()
     my_server.start()
-    monitorclient_p = multiprocessing.Process(target=monitor)
-    monitorclient_p.start()
+    #monitorclient_p = multiprocessing.Process(target=monitor)
+    #monitorclient_p.start()
 
 
 

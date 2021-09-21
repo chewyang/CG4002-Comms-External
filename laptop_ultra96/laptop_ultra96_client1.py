@@ -6,6 +6,7 @@ from dancedanceobjects.objects import RequestMessagePacket, syncMessagePacket
 from ssh.ssh_tunneling import TunnelNetwork
 import threading
 import zmq
+import pickle
 
 LOCAL_ADDRESS = "localhost"
 TARGET_ADDRESS = "137.132.86.227"
@@ -69,7 +70,10 @@ class Ultra96Client(threading.Thread):
         self.requestNum = self.requestNum +1
 
     def recvMsg(self):
+        print("obtaining")
         message = self.connection.recv_pyobj()
+        print("received")
+        print(message)
         if isinstance(message, syncMessagePacket):
             message.blunoRecvTime = self.getCurrentMilliTime()
             print(message.printSyncString())
