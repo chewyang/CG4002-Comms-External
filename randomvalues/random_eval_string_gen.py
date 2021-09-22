@@ -1,7 +1,4 @@
 import random
-from time import sleep
-import multiprocessing
-import threading
 
 ACTIONS = ['mermaid', 'jamesbond', 'dab']
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
@@ -16,7 +13,7 @@ bleDict = dict.fromkeys([
     'mil'
     ])
 
-
+"""This is the class that generates the fake sensor data and the fake predicted data."""
 class StringGen():
     def __init__(self):
         super(StringGen, self).__init__()

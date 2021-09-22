@@ -1,69 +1,65 @@
-import os
-import sys
-import random
 import time
 import ultra96_eval_client
 import random_eval_string_gen
 import threading
 import multiprocessing
-import base64
-import numpy as np
-from tkinter import Label, Tk
-import pandas as pd
-from Crypto.Cipher import AES
 import zmq
 from dancedanceobjects.objects import ReplyMessagePacket, RequestMessagePacket, syncMessagePacket
-from zmq.devices.basedevice import ProcessDevice
-from zmq.devices.monitoredqueuedevice import MonitoredQueue
-from zmq.utils.strtypes import asbytes
-import pickle
-#------------------------------------
-frontend_port = 15016
-backend_port = 15017
-monitor_port = 15018
-number_of_workers = 2
-#------------------------------------
+
+
+
+FRONTEND_PORT = 15016
+BACKEND_PORT = 15017
 THREADS = []
-MESSAGE_SIZE = 3
 ULTRA96_IP = "137.132.86.227"
+
 class Server(threading.Thread):
     def __init__(self, backendPort):
         super(Server, self).__init__()
 
 
         self.backendPort = backendPort
-        self.has_no_response = False
         self.connection = None
         self.replyNum = 1
         self.estConnection()
-        # Create a TCP/IP socket and bind to port
         self.shutdown = threading.Event()
         print("Listening...")
 
+
+    """
+    Establishes the socket connections to the evaluation server.
+    """
     def estConnection(self):
         self.context = zmq.Context()
         self.connection = self.context.socket(zmq.REP)
-        self.connection.connect("tcp://137.132.86.227:%s" % backend_port)
+        self.connection.connect("tcp://137.132.86.227:%s" % BACKEND_PORT)
 
+
+    """
+    Sends the respective reply according to the request from laptop.
+    """
     def sendMsg(self, data):
         repMsg = object()
 
+        #If the data received is the BLE sensor data, send over the fake predicted results to evalserver and acknowledgement msg to laptop
         if isinstance(data, RequestMessagePacket):
             repMsg = ReplyMessagePacket(data.clientId, data.msgCount)
             print(data.printReqString())
             print(repMsg.printReqString())
             THREADS[0].sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString())
 
+        #If the data received is a sync, send over the timestamps when it receives and reply. Then send it over back to the laptop
         elif isinstance(data, syncMessagePacket):
-            data.ultra96RecvTime = self.current_milli_time()
+            data.ultra96RecvTime = self.ultra96ReceiveTime
             data.ultra96SentTime = self.current_milli_time()
             repMsg = data
 
-
+        
         elif isinstance(data, str):
             if "logout" in data:
                 self.shutdown.set()
                 THREADS[0].sendLogoutMsg()
+
         self.connection.send_pyobj(repMsg)
 
 
@@ -72,6 +68,9 @@ class Server(threading.Thread):
         return msg
 
 
+    """
+    Main loop that waits for a Request from the laptop and responds to it respectively.
+    """
     def run(self):
         print("waiting for msg")
         while not self.shutdown.is_set():
@@ -79,10 +78,10 @@ class Server(threading.Thread):
             data = self.recvMsg()
             if data:
                 try:
+                    self.ultra96ReceiveTime = self.current_milli_time()
                     self.sendMsg(data)
-
                 except Exception as e:
-                    print("error bitch")
+                    print("error")
                     print(e)
             else:
                 print('no more data from', self.client_address)
@@ -103,46 +102,20 @@ class Server(threading.Thread):
         return round(time.time() * 1000)
 
 
-
-
-def monitordevice():
-    in_prefix=asbytes('in')
-    out_prefix=asbytes('out')
-    monitoringdevice = MonitoredQueue(zmq.XREP, zmq.XREQ, zmq.PUB, in_prefix, out_prefix)
-
-    monitoringdevice.bind_in("tcp://"+ULTRA96_IP+":%d" % frontend_port)
-    monitoringdevice.bind_out("tcp://"+ULTRA96_IP+":%d" % backend_port)
-    monitoringdevice.bind_mon("tcp://"+ULTRA96_IP+":%d" % monitor_port)
-
-    monitoringdevice.setsockopt_in(zmq.RCVHWM, 1)
-    monitoringdevice.setsockopt_out(zmq.SNDHWM, 1)
-    print("starting up")
-    monitoringdevice.start()
-    print( "Program: Monitoring device has started")
-
-
-def monitor():
-    table = []
-    print ("Starting monitoring process")
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    print ("Collecting updates from server...")
-    socket.connect ("tcp://"+ULTRA96_IP+":%s" % monitor_port)
-    socket.setsockopt(zmq.SUBSCRIBE, "".encode("utf-8"))
-    print("Monitoring client:")
-    while True:
-        string = socket.recv_multipart()
-
+"""
+Pyzmq queue device that acts as the intermediary between laptop and ultra96, 
+to allow for easy scaling of the number of laptops used.
+"""
 def queueDevice():
 
     try:
         context = zmq.Context(1)
         #socket facing the clients
-        frontend = context.socket(zmq.XREP)
-        frontend.bind("tcp://" + ULTRA96_IP + ":%d" % frontend_port)
+        frontend = context.socket(zmq.XREP) 
+        frontend.bind("tcp://" + ULTRA96_IP + ":%d" % FRONTEND_PORT)
         #socket facing services
         backend = context.socket(zmq.XREQ)
-        backend.bind("tcp://" + ULTRA96_IP + ":%d" % backend_port)
+        backend.bind("tcp://" + ULTRA96_IP + ":%d" % BACKEND_PORT)
         zmq.device(zmq.QUEUE, frontend, backend)
 
     except Exception as e:
@@ -155,26 +128,20 @@ def queueDevice():
         context.term()
 
 
+
 def main():
 
+    
+    ultra96EvalClient = ultra96_eval_client.EvalClient("localhost", 8088)
+    queueDeviceProcess = multiprocessing.Process(target= queueDevice)
+    my_server = Server(BACKEND_PORT)
 
-    ip_addr = "127.0.0.1"
-    port_num = 8082
-    group_id = "4"
-    #queueDevice()
-    ultra96_eval = ultra96_eval_client.EvalClient("localhost", 8088)
-    monitoring_p = multiprocessing.Process(target= queueDevice)
-    monitoring_p.start()
-
-    my_server = Server(backend_port)
-
-    THREADS.append(ultra96_eval)
+    THREADS.append(ultra96EvalClient)
     THREADS.append(my_server)
 
-    ultra96_eval.start()
+    queueDeviceProcess.start()
+    ultra96EvalClient.start()
     my_server.start()
-    #monitorclient_p = multiprocessing.Process(target=monitor)
-    #monitorclient_p.start()
 
 
 
