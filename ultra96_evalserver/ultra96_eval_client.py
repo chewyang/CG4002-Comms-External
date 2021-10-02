@@ -1,20 +1,22 @@
+from pickle import FALSE
 import time
 import socket
 import threading
 import base64
 from Crypto.Cipher import AES
 from Crypto import Random
-
+import sys
+sys.path.append('..')
+from randomvalues import random_eval_string_gen
 BLOCK_SIZE = 16
-POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
 TARGET_IP = "localhost" #To be changed to evaluation server's IP address
-TARGET_PORT = 55359 #To be changed to evaluation server's port
+TARGET_PORT = 8089 #To be changed to evaluation server's port
 
 #Pads the plaintext to be a multiple of the block size of the cipher.
 pad = lambda s:  ((BLOCK_SIZE - len(s) % BLOCK_SIZE) -1 ) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE) + "#" +  s
 
 PASSWORD = "aaaaaaaaaaaaaaaa"
-
+MAIN_FLAG = False
 
 
 class EvalClient(threading.Thread):
@@ -45,12 +47,17 @@ class EvalClient(threading.Thread):
                 try:
                     msg = data.decode("utf8")
                     print("Data received from evaluation server is: " + msg)
+                    #If this program is run as the main program instead of being invoked from the u96 host script
+                    if MAIN_FLAG:
+                        self.sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString())
+                        time.sleep(4)
                 except Exception as e:
                     print("Error in receiving messages")
                     print(e)
             else:
                 print('no more data')
-                self.stop()
+                self.stop() 
+                
 
 
     """Pads the plaintext and encryptes the plaintext with a random IV"""
@@ -92,3 +99,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    MAIN_FLAG = True

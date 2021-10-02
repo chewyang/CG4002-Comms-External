@@ -1,23 +1,28 @@
 import time
-import ultra96_eval_client
-import random_eval_string_gen
+import sys
+#sys.path.append('..')
+from ultra96_evalserver import ultra96_eval_client
+from randomvalues import random_eval_string_gen
 import threading
 import multiprocessing
 import zmq
 from dancedanceobjects.objects import ReplyMessagePacket, RequestMessagePacket, syncMessagePacket
+from collections import defaultdict
 
-
-
+NUM_WORKERS = 2
 FRONTEND_PORT = 15016
 BACKEND_PORT = 15017
 THREADS = []
 ULTRA96_IP = "137.132.86.227"
+#ULTRA96_IP = "127.0.0.1"
+
 
 class Server(threading.Thread):
     def __init__(self, backendPort):
         super(Server, self).__init__()
 
-
+        self.startTimes= defaultdict(list)
+        print(self.startTimes)
         self.backendPort = backendPort
         self.connection = None
         self.replyNum = 1
@@ -32,7 +37,7 @@ class Server(threading.Thread):
     def estConnection(self):
         self.context = zmq.Context()
         self.connection = self.context.socket(zmq.REP)
-        self.connection.connect("tcp://137.132.86.227:%s" % BACKEND_PORT)
+        self.connection.connect("tcp://%s:%s" % (ULTRA96_IP, BACKEND_PORT))
 
 
     """
@@ -44,12 +49,18 @@ class Server(threading.Thread):
         #If the data received is the BLE sensor data, send over the fake predicted results to evalserver and acknowledgement msg to laptop
         if isinstance(data, RequestMessagePacket):
             repMsg = ReplyMessagePacket(data.clientId, data.msgCount)
-            print(data.printReqString())
-            print(repMsg.printReqString())
-            THREADS[0].sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString())
+            #print(data.printReqString())
+            #print(repMsg.printReqString())
+            danceMoveNumAndStartTime = data.rawBleData["danceMoveNum, startTime"]
+
+            # if it detects a start of a move, append it appropriately to the dictionary.
+            if isinstance( danceMoveNumAndStartTime, tuple): 
+                self.startTimes[str(danceMoveNumAndStartTime[0])].append(danceMoveNumAndStartTime[1])
+                self.calculateSyncDelay()
 
         #If the data received is a sync, send over the timestamps when it receives and reply. Then send it over back to the laptop
         elif isinstance(data, syncMessagePacket):
+            print(data.printSyncString())
             data.ultra96RecvTime = self.ultra96ReceiveTime
             data.ultra96SentTime = self.current_milli_time()
             repMsg = data
@@ -63,10 +74,38 @@ class Server(threading.Thread):
         self.connection.send_pyobj(repMsg)
 
 
+    """
+    This method calculates the sync delay between the first and last dancers and sends the 
+    evaluation string over to the evaluation server. If there is only one dancer, send a sync delay of 0.
+    """
+    def calculateSyncDelay(self):
+        keys = self.startTimes.keys()
+        lastKey = list(keys)[-1]
+        lastValue = self.startTimes[lastKey]
+
+        #If the number of clients = x and x start times have been obtained, calculate sync delay and send to the evaluation server
+        if NUM_WORKERS == 3 and len(lastValue) == 3:
+            syncDelay = max(lastValue) - min(lastValue)
+            print(syncDelay)
+            THREADS[0].sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString(syncDelay))
+            
+        elif NUM_WORKERS == 2 and len(lastValue) == 2:
+            syncDelay = max(lastValue) - min(lastValue)
+            print(syncDelay)
+            THREADS[0].sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString(syncDelay))
+        
+        elif NUM_WORKERS == 1:
+            THREADS[0].sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString(0))
+
+            
+
+
+
     def recvMsg(self):
         msg = self.connection.recv_pyobj()
         return msg
 
+        
 
     """
     Main loop that waits for a Request from the laptop and responds to it respectively.

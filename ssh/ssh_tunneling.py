@@ -39,11 +39,8 @@ class TunnelNetwork(object):
             self.tunnels.append(SSHTunnelForwarder(remote_bind_address=target, **info))
             
             try:
-                print("connecting")
-
                 self.tunnels[idx].start()
-                print("connected")
-                print(self.tunnels[0].local_bind_port)
+                
             except Exception as e:
                 print(e)
                 return False
@@ -84,10 +81,7 @@ if __name__ == '__main__':
     tn = TunnelNetwork(tunnel_i, TARGET_ADDRESS, TARGET_PORT)
     
     tn.start_tunnels()
-    print("niggs")
     print(tn.get_local_connect_port())
-    
-    print("hi")
     while True:
         sleep(2)
 

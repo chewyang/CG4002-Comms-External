@@ -16,7 +16,7 @@ class ReplyMessagePacket:
         self.msgCount = msgCount
 
     def printReqString(self):
-        return "Request #%d, from client #%d: %s, acknowledged" % (self.msgCount, self.clientId)
+        return "Request #%d, from client #%d:, acknowledged" % (self.msgCount, self.clientId)
 
 class syncMessagePacket:
     def __init__(self, blunoSentTime):

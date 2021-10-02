@@ -53,7 +53,7 @@ class Server(threading.Thread):
         self.action_set_time = None
 
         self.idx = 0
-        self.timeout = 20
+        self.timeout = 10
         self.has_no_response = False
         self.connection = None
         self.timer = None
@@ -92,7 +92,7 @@ class Server(threading.Thread):
         decrypted_message = decrypted_message[decrypted_message.find('#'):]
         decrypted_message = bytes(decrypted_message[1:], 'utf8').decode('utf8')
         messages = decrypted_message.split('|')
-        print(messages)
+        #print(messages)
         position, action, sync = messages[:MESSAGE_SIZE]
         return {
             'position': position, 'action': action, 'sync':sync
@@ -124,8 +124,9 @@ class Server(threading.Thread):
                         self.send_dancer_positions()
                         self.set_next_action()  # Get new action
                 except Exception as e:
-                    print("error bitch")
-                    print(e)
+                    print("no more data")
+                    print("bye bye")
+                    #print(e)
             else:
                 print('no more data from', self.client_address)
                 self.stop()
@@ -222,14 +223,17 @@ def add_display_label(display_window, label):
 
 
 def main():
-    '''if len(sys.argv) != 4:
+    if len(sys.argv) != 4:
         print('Invalid number of arguments')
         print('python eval_server.py [IP address] [Port] [groupID]')
-        sys.exit()'''
+        sys.exit()
 
-    ip_addr = "localhost"
-    port_num = 8088
-    group_id = "4"
+    #ip_addr = "localhost"
+    #port_num = 8088
+    #group_id = "4"
+    ip_addr = sys.argv[1]
+    port_num = int(sys.argv[2])
+    group_id = sys.argv[3]
 
     my_server = Server(ip_addr, port_num, group_id)
     my_server.start()

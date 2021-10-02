@@ -7,7 +7,7 @@ from ssh.ssh_tunneling import TunnelNetwork
 import threading
 import zmq
 
-
+NUM_WORKERS = 3
 TARGET_ADDRESS = "137.132.86.227" #Target of Ultra96
 TARGET_PORT = 15016 #Target port of the Ultra96 to connect to
 
@@ -32,25 +32,27 @@ TUNNEL_INFO = [
         }
     ]
 
-"""This is the client script that connects to the Ultra96.
+"""
+This is the client script that connects to the Ultra96.
 """
 class Ultra96Client(threading.Thread):
-    def __init__(self, clientId):
+    def __init__(self, localPort, clientId):
         super(Ultra96Client, self).__init__()
         
         self.clientId = clientId
+        self.blunoEmulator = StringGen(self.clientId)
+
         self.shutDown = threading.Event()
         self.connection = None
         self.requestNum = 1
-        self.port_num = self.estSSHtunnel()
-        print(self.port_num)
+        self.port_num = localPort
+        #print(self.port_num)
         self.estConnection()
 
         #Daemonise this thread so that it can run in the background to detect for sync and logout messages that are inputted manually.
         self.p2 = threading.Thread(target=self.sendMsgSyncLogout)
         self.p2.setDaemon(True)
         self.p2.start()
-
     
     """
     Establishes the REP-REQ socket connections to the Ultra96.
@@ -84,18 +86,7 @@ class Ultra96Client(threading.Thread):
             print(message.getClockOffset())
         return message
             
-    """
-    Establishes the SSH tunnel to the target IP and target port of the Ultra96
-    """
-    def estSSHtunnel(self):
-        self.tunnel = TunnelNetwork(TUNNEL_INFO, TARGET_ADDRESS, TARGET_PORT)
-        try:
-        
-            self.tunnel.start_tunnels()
-            print("Tunnel created")
-            return self.tunnel.get_local_connect_port() #This is the random port that the local socket should connect to
-        except Exception as e:
-            print("Failed to create SSH tunnel")
+   
 
 
     """
@@ -107,7 +98,7 @@ class Ultra96Client(threading.Thread):
             if "logout" in msg:
                 self.sendMsg("logout")
                 print("Logout request sent!")
-                self.stop()
+                self.shutDown.set()
 
             elif "sync" in msg:
                 syncMsg = syncMessagePacket(self.getCurrentMilliTime())
@@ -119,15 +110,19 @@ class Ultra96Client(threading.Thread):
     """
     def run(self):
         while not self.shutDown.is_set():
-            self.rawBleData = StringGen()
-            msg = RequestMessagePacket(self.clientId, self.requestNum, self.rawBleData.sendRawBleData())
+            #self.rawBleData = StringGen(self.clientId)
+            msg = RequestMessagePacket(self.clientId, self.requestNum, self.blunoEmulator.sendRawBleData())
+            if self.shutDown.is_set():
+                pass
+            else:
+                try:
+                    self.sendMsg(msg)
+                    msgReceived = self.recvMsg()
 
-            try:
-                self.sendMsg(msg)
-            except Exception as e:
-                print(e)
-            msgReceived = self.recvMsg()
-            time.sleep(3)
+                except Exception as e:
+                    print(e)
+            
+            #time.sleep(3)
 
     """
     Stops the program.
@@ -136,7 +131,7 @@ class Ultra96Client(threading.Thread):
         self.shutDown.set()
         self.connection.close()
         self.context.destroy()
-        self.tunnel.stop_tunnels()
+        #self.tunnel.stop_tunnels()
         
         self.p2
         
@@ -144,9 +139,27 @@ class Ultra96Client(threading.Thread):
         return round(time.time() * 1000)
 
 
+"""
+Establishes the SSH tunnel to the target IP and target port of the Ultra96
+"""
+def estSSHtunnel():
+    tunnel = TunnelNetwork(TUNNEL_INFO, TARGET_ADDRESS, TARGET_PORT)
+    try:
+    
+        tunnel.start_tunnels()
+        localPort = tunnel.get_local_connect_port() #This is the random port that the local socket should connect to
+        print("Tunnel to Ultra96 at %s:%s created at local port %s" % (TARGET_ADDRESS, TARGET_PORT, localPort))
+        return tunnel 
+    except Exception as e:
+        print("Failed to create SSH tunnel")
+
 def main():
-    my_server = Ultra96Client(1)
-    my_server.start()
+
+    sshTunnel = estSSHtunnel()
+    localPort = sshTunnel.get_local_connect_port()
+    for client_id in range(NUM_WORKERS):
+        Ultra96Client(clientId= client_id, localPort= localPort).start()
+    
     
 
 
