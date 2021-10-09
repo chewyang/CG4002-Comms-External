@@ -223,17 +223,17 @@ def add_display_label(display_window, label):
 
 
 def main():
-    if len(sys.argv) != 4:
-        print('Invalid number of arguments')
-        print('python eval_server.py [IP address] [Port] [groupID]')
-        sys.exit()
+    #if len(sys.argv) != 4:
+    #    print('Invalid number of arguments')
+    #    print('python eval_server.py [IP address] [Port] [groupID]')
+    #    sys.exit()
 
-    #ip_addr = "localhost"
-    #port_num = 8088
-    #group_id = "4"
-    ip_addr = sys.argv[1]
-    port_num = int(sys.argv[2])
-    group_id = sys.argv[3]
+    ip_addr = "localhost"
+    port_num = 8888
+    group_id = "4"
+    #ip_addr = sys.argv[1]
+    #port_num = int(sys.argv[2])
+    #group_id = sys.argv[3]
 
     my_server = Server(ip_addr, port_num, group_id)
     my_server.start()

@@ -4,17 +4,8 @@ import time
 ACTIONS = ['mermaid', 'jamesbond', 'dab']
 POSITIONS = ['1 2 3', '3 2 1', '2 3 1', '3 1 2', '1 3 2', '2 1 3']
 
-bleDict = dict.fromkeys([
-    'dancerId',
-    'danceMoveNum, startTime',
-    'roll',
-    'pitch',
-    'yaw',
-    'AccX',
-    'AccY',
-    'AccZ',
-    'mil'
-    ])
+
+
 
 """This is the class that generates the fake sensor data and the fake predicted data."""
 class StringGen():
@@ -30,7 +21,21 @@ class StringGen():
     The start time of the dance move is only sent every 10 data to indicate the start of a different moves
     """
     def sendRawBleData(self):
-        time.sleep(random.randint(1,3))
+        bleDict = dict.fromkeys([
+            'dancerId',
+            'danceMoveNum, startTime',
+            'roll',
+            'pitch',
+            'yaw',
+            'AccX',
+            'AccY',
+            'AccZ',
+            'mil'
+        ])
+
+        #time.sleep(random.randint(1,3))
+        #time.sleep(random.random())
+        time.sleep(0.0001)
 
         if self.counter == 0: #start of the next dance move
             bleDict["danceMoveNum, startTime"] = self.danceMoveNum, self.current_milli_time()
@@ -62,15 +67,27 @@ class StringGen():
         return round(time.time() * 1000)
 
     def sendEvalString(self, syncDelay = None):
+        predict = dict.fromkeys([
+           'position',
+           'danceMove',
+           'syncDelay'
+        ])
         
         if syncDelay == None:
-            syncDelay = random.randint(0,200)
+            predict["syncDelay"] = random.randint(0,200)
+        else:
+            predict["syncDelay"] = syncDelay
 
         actionIdx = random.randint(0,2)
+        predict["danceMove"] = ACTIONS[actionIdx]
+
         positionIdx = random.randint(0,5)
-        #syncDelay = random.randrange(0, 500)
-        randMsg = str(POSITIONS[positionIdx]) + "|" + ACTIONS[actionIdx] + "|" + str(syncDelay)
-        return randMsg
+        predict["position"] = POSITIONS[positionIdx]
+
+        
+        randMsg = str(predict["position"] + "|" + predict["danceMove"] + "|" + str(predict["syncDelay"]))
+        print(randMsg)
+        return randMsg, predict
 
 def main():
     myGen = StringGen()

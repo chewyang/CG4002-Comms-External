@@ -9,8 +9,9 @@ import sys
 sys.path.append('..')
 from randomvalues import random_eval_string_gen
 BLOCK_SIZE = 16
-TARGET_IP = "localhost" #To be changed to evaluation server's IP address
-TARGET_PORT = 8089 #To be changed to evaluation server's port
+TARGET_IP = "137.132.92.73" #To be changed to evaluation server's IP address
+#TARGET_IP = "localhost"
+TARGET_PORT = 8888 #To be changed to evaluation server's port
 
 #Pads the plaintext to be a multiple of the block size of the cipher.
 pad = lambda s:  ((BLOCK_SIZE - len(s) % BLOCK_SIZE) -1 ) * chr(BLOCK_SIZE - len(s) % BLOCK_SIZE) + "#" +  s
@@ -49,7 +50,8 @@ class EvalClient(threading.Thread):
                     print("Data received from evaluation server is: " + msg)
                     #If this program is run as the main program instead of being invoked from the u96 host script
                     if MAIN_FLAG:
-                        self.sendEncryptedMsg(random_eval_string_gen.StringGen().sendEvalString())
+                        randmsg = random_eval_string_gen.StringGen().sendEvalString()
+                        self.sendEncryptedMsg(randmsg[0])
                         time.sleep(4)
                 except Exception as e:
                     print("Error in receiving messages")
